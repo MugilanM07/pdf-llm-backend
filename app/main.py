@@ -126,7 +126,7 @@ async def query_doc(doc_id: str, question: str):
 @app.post("/login")
 def login(user: UserLogin):
     try:
-        if user.username != "admin" or user.password != "password":
+        if user.username != "admin" or user.password != "root":
             raise HTTPException(status_code=401, detail="Invalid credentials")
         access_token = create_access_token({"sub": user.username})
     except HTTPException:
