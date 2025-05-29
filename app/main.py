@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends,Form
 from app import database, utils, llm, schemas, auth
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
@@ -6,6 +6,8 @@ import uuid
 from app.auth import create_access_token, verify_token
 from app.schemas import UserLogin
 import logging
+from app.utils import extract_text_by_page
+from app.rag import insert_documents, run_rag_query
 
 app = FastAPI()
 app.add_middleware(
@@ -126,7 +128,7 @@ async def query_doc(doc_id: str, question: str):
 @app.post("/login")
 def login(user: UserLogin):
     try:
-        if user.username != "admin" or user.password != "password":
+        if user.username != "admin" or user.password != "root":
             raise HTTPException(status_code=401, detail="Invalid credentials")
         access_token = create_access_token({"sub": user.username})
     except HTTPException:
@@ -135,3 +137,22 @@ def login(user: UserLogin):
         logger.error(f"Login error: {e}")
         raise HTTPException(status_code=500, detail="Internal server error during login")
     return {"access_token": access_token}
+
+@app.post("/upload_pdf/")
+async def upload_pdf(file: UploadFile = File(...)):
+    file_bytes = await file.read()
+    filename = file.filename
+    
+    chunks = extract_text_by_page(file_bytes, filename)
+    insert_documents(chunks)
+
+    return {"message": f"{len(chunks)} chunks (with page info) uploaded to Pinecone."}
+
+
+@app.post("/ask/")
+async def ask_question(question: str = Form(...)):
+    result = run_rag_query(question)
+    return {
+        "answer": result["result"],
+        "sources": [doc.metadata for doc in result["source_documents"]]
+    }
