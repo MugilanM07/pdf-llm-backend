@@ -16,7 +16,7 @@ llm = ChatGoogleGenerativeAI(
 openai_key = os.getenv("OPENAI_API_KEY")
 pinecone_key = os.getenv("PINECONE_API_KEY")
 pinecone_env = os.getenv("PINECONE_ENV")
-index_name = "staging-langchain-nyl"
+index_name = os.getenv("PINECONE_INDEX_NAME")
 
 
 embedding = OpenAIEmbeddings(openai_api_key=openai_key,model = "text-embedding-ada-002")
